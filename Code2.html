@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <meta charset="UTF-8" />
+    <title>Outil intéractif d'analyse spatiale de la commune d'Eysines</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            text-align: left;
+            margin: 20px 0 0 16px;
+            padding: 0;
+            z-index: 1002;
+        }
+        #map {
+            width: 95vw;
+            max-width: 100%;
+            height: 90vh;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            margin: 20px auto;
+            position: relative; /* Ajouté pour le positionnement relatif */
+        }
+        .legend {
+            background: white;
+            line-height: 1.4em;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            font-size: 14px;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 1000;
+            width: 250px;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.8;
+            border-radius: 3px;
+        }
+        .north-arrow {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 60px;
+            height: auto;
+            z-index: 1000;
+            opacity: 0.8;
+        }
+        #selectAllButton {
+            position: fixed;
+            top: 265px;
+            left: 50px;
+            z-index: 1001;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #searchBox {
+            position: fixed;
+            top: 70px;
+            right: 60px;
+            z-index: 1001;
+            width: 90vw;
+            max-width: 500px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: white;
+            margin-top: 50px;
+        }
+        .leaflet-popup-content-wrapper.custom-popup {
+            max-width: 300px;
+            width: auto !important;
+            padding: 10px;
+        }
+        .custom-popup img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+        }
+        .custom-popup-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .custom-popup-content > div {
+            text-align: center;
+        }
+        /* Style pour centrer l'échelle */
+        .leaflet-bottom.leaflet-left {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        /* Style pour le logo */
+        .logo {
+            position: absolute;
+            top: 10px;
+            right: 50px;
+            width: 50px; /* Ajustez la taille selon vos besoins */
+            height: auto;
+            z-index: 1002;
+        }
+    </style>
+</head>
+<body>
+    <!-- Ajout du logo -->
+    <img src="https://raw.githubusercontent.com/Axeloiu/Eysines-/main/logo%20Outils3.png" alt="Logo" class="logo">
+
+    <h2>Outil intéractif d'analyse spatiale de la commune d'Eysines</h2>
+    <select id="mapSelector" style="position: fixed; top: 160px; right: 60px; z-index: 1001; padding: 10px; border-radius: 6px;">
+        <option value="">Sélectionnez une carte (default)</option>
+        <option value="hotspots">Hotspots à mégots</option>
+        <option value="espace_vert">Espace vert</option>
+        <option value="accessibilite_vert">Accessibilité des espaces verts</option>
+        <option value="menages">Ménages</option>
+        <option value="carte_historique">Carte historique 1967</option>
+        <option value="propriete">Propriété du cadastre</option>
+        <option value="zones_humides">Zones humides</option>
+        <option value="espace_protege">Espace protégé</option>
+        <option value="continuite_ecologique">Continuité écologique</option>
+        <option value="arrets">Arrêts de bus et tram</option> <!-- Nouvelle option -->
+    </select>
+    <select id="baseMapSelector" style="position: fixed; bottom: 32px; left: 50px; z-index: 1001; padding: 10px; border-radius: 6px;">
+        <option value="osm">OpenStreetMap</option>
+        <option value="satellite">Satellite</option>
+    </select>
+    <input
+        type="text"
+        id="searchBox"
+        placeholder="Rechercher un hotspot (ID, état, type de sol, nom)…"
+        style="width: 90%; max-width: 500px; padding: 8px 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #ccc;"
+    >
+    <div id="map"></div>
+    <button id="resetView" style="
+    position: fixed;
+    top: 120px;
+    right: 60px;
+    z-index: 1001;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    background: #007bff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    ">
+    Recentrer la carte
+    </button>
+    <button id="selectAllButton">
+    Sélectionner toute la carte
+    </button>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script>
+        // Initialisation de la carte
+        const map = L.map('map').setView([44.88, -0.64], 13);
+
+        // Couche par défaut
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Couche satellite
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        // Ajout de l'échelle
+        L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);
+
+        // Objets pour les couches et les légendes
+        const layers = {
+            hotspots: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            continuite_ecologique: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            espace_vert: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            accessibilite_vert: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            menages: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            carte_historique: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            propriete: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            zones_humides: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            espace_protege: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            arrets: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            } // Nouvelle couche
+        };
+
+        const drawnItems = new L.FeatureGroup().addTo(map);
+
+        // Contrôle de dessin
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: true,
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                marker: false,
+                circlemarker: false
+            },
+            edit: {
+                featureGroup: drawnItems
+            }
+        });
+        map.addControl(drawControl);
+
+        // Événement de création de dessin
+        map.on(L.Draw.Event.CREATED, function (e) {
+            drawnItems.clearLayers();
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+            const drawnPolygon = layer.toGeoJSON().geometry;
+            const selectedMapType = document.getElementById('mapSelector').value;
+            map.fitBounds(layer.getBounds());
+            loadMapDataInArea(drawnPolygon, selectedMapType);
+        });
+
+        // Événement de changement de sélecteur de carte
+        document.getElementById('mapSelector').addEventListener('change', function (e) {
+            const selectedMap = e.target.value;
+            updateMapLayers(selectedMap);
+        });
+
+        // Événement de changement de sélecteur de fond de carte
+        document.getElementById('baseMapSelector').addEventListener('change', function (e) {
+            const selectedBaseMap = e.target.value;
+            if (selectedBaseMap === 'osm') {
+                map.removeLayer(satelliteLayer);
+                map.addLayer(osmLayer);
+            } else if (selectedBaseMap === 'satellite') {
+                map.removeLayer(osmLayer);
+                map.addLayer(satelliteLayer);
+            }
+        });
+
+        // Fonction pour mettre à jour les couches de la carte
+        function updateMapLayers(selectedMap) {
+            Object.values(layers).forEach(layerObj => {
+                layerObj.layer.clearLayers();
+                layerObj.legend.remove();
+            });
+
+            if (selectedMap && layers[selectedMap]) {
+                map.addLayer(layers[selectedMap].layer);
+                layers[selectedMap].legend.addTo(map);
+            } else {
+                map.addLayer(osmLayer);
+            }
+
+            const polygon = drawnItems.getLayers()[0]?.toGeoJSON().geometry;
+            loadMapDataInArea(polygon, selectedMap);
+        }
+
+        // Fonction pour obtenir la couleur en fonction de la qualification
+        function getColor(QUALIFICAT) {
+            if (!QUALIFICAT) return 'black';
+            const q = QUALIFICAT.toLowerCase().trim();
+            if (q === 'forte présence de mégots') return 'red';
+            if (q === 'absence de mégots') return 'gray';
+            if (q === 'mégots en quantité prononcé') return 'orange';
+            if (q === 'quelques mégots sporadiques') return 'yellow';
+            if (q === 'continuité écologique') return 'green';
+            return 'gray';
+        }
+
+        // Fonction pour obtenir la couleur en fonction du type de proximité
+        function getProximityColor(ACCESS) {
+            if (!ACCESS) return 'brown';
+            const t = ACCESS.toLowerCase().trim();
+            if (t === 'à moins de 100m d\'un arrêt de bus') return 'blue';
+            if (t === 'à plus de 100m d\'un arrêt de bus') return 'green';
+            return 'gray';
+        }
+
+        // Fonction pour styliser les entités
+        function styleFeature(feature) {
+            const qualif = feature.properties?.QUALIFICAT;
+            return {
+                color: getColor(qualif),
+                weight: 2,
+                fillColor: getColor(qualif),
+                fillOpacity: 0.8
+            };
+        }
+
+        // Fonction pour styliser les entités d'accessibilité
+        function styleAccessibiliteFeature(feature) {
+            const ACCESS = feature.properties?.ACCESS;
+            return {
+                color: getProximityColor(ACCESS),
+                weight: 2,
+                fillColor: getProximityColor(ACCESS),
+                fillOpacity: 0.8
+            };
+        }
+
+        // Fonction pour styliser les entités des espaces verts
+        function styleEspaceVertFeature(feature) {
+            const n18 = feature.properties?.N18;
+            return {
+                color: getEspaceVertColor(n18),
+                weight: 2,
+                fillColor: getEspaceVertColor(n18),
+                fillOpacity: 0.8
+            };
+        }
+
+        // Fonction pour obtenir la couleur des espaces verts
+        function getEspaceVertColor(N18) {
+            if (!N18) return 'black';
+            const n = N18.toLowerCase().trim();
+            if (n === 'faible') return 'yellow';
+            if (n === 'moyen') return 'orange';
+            if (n === 'fort') return 'red';
+            if (n === 'très fort') return 'darkred';
+            return 'white';
+        }
+
+        // Fonction pour obtenir la couleur des entités historiques
+        function getHistoricalColor(layer) {
+            if (layer === 'Espace agri 1967 réel') return 'pink';
+            if (layer === 'Espace foret 1967 réel') return 'yellow';
+            return 'gray';
+        }
+
+        // Fonction pour styliser les entités historiques
+        function styleHistoricalFeature(feature) {
+            const layer = feature.properties?.layer;
+            return {
+                color: getHistoricalColor(layer),
+                weight: 2,
+                fillColor: getHistoricalColor(layer),
+                fillOpacity: 0.8
+            };
+        }
+
+        // Fonction pour obtenir le centroïde d'une géométrie
+        function getCentroid(geometry) {
+            let coords;
+            if (geometry.type === "Polygon") {
+                coords = geometry.coordinates[0];
+            } else if (geometry.type === "MultiPolygon") {
+                coords = geometry.coordinates[0][0];
+            } else {
+                return [0, 0];
+            }
+            let x = 0, y = 0;
+            coords.forEach(pt => {
+                x += pt[0];
+                y += pt[1];
+            });
+            const len = coords.length;
+            return [y / len, x / len];
+        }
+
+        // Fonction pour gérer les popups des entités
+        function onEachFeature(feature, layer) {
+            const props = feature.properties || {};
+            const TYPE_LIEU = props.TYPE_LIEU || "Nom inconnu";
+            const QUALIFICAT = props.QUALIFICAT || "Non précisé";
+            const ID = props.ID || "Non précisé";
+            const AREA = props.AREA || "Non précisé";
+            const Sol = props.Sol || "Non précisé";
+            const TYPE = props.TYPE || "Non précisé";
+            const centroid = getCentroid(feature.geometry);
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Nom :</b> ${TYPE_LIEU}<br>
+                    <b>Etat du hotspot :</b> ${QUALIFICAT}<br>
+                    <b>ID :</b> ${ID}<br>
+                    <b>Aire (m2) :</b> ${AREA}<br>
+                    <b>Type de sol :</b> ${Sol}<br>
+                    <b>Coordonnées :</b><br>
+                    &nbsp;&nbsp;- Latitude : ${centroid[0].toFixed(5)}<br>
+                    &nbsp;&nbsp;- Longitude : ${centroid[1].toFixed(5)}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            hotspotLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour gérer les popups des entités des espaces verts
+        function onEachEspaceVertFeature(feature, layer) {
+            const props = feature.properties || {};
+            const N18 = props.N18 || "Non précisé";
+            const ID = props.ID || "Non précisé";
+            const Aires = props.Aires || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>ID :</b> ${ID}<br>
+                    <b>Area :</b> ${Aires/10000}<br>
+                    <b>Importance :</b> ${N18}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            espaceVertLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour gérer les popups des entités des ménages
+        function onEachMenageFeature(feature, layer) {
+            const props = feature.properties || {};
+            const men = props.men || 0;
+            const men_pauv = props.men_pauv || 0;
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Ménages :</b> ${men}<br>
+                    <b>Ménages Pauvres :</b> ${men_pauv}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            menageLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour gérer les popups des entités de propriété
+        function onEachProprieteFeature(feature, layer) {
+            const props = feature.properties || {};
+            const layerName = props.layer || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Propriété :</b> ${layerName}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            proprieteLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour styliser les entités de propriété
+        function styleProprieteFeature(feature) {
+            const layerName = feature.properties?.layer;
+            if (layerName === "Propriété de Bordeaux Métropole") {
+                return {
+                    color: "rgba(0, 0, 255, 0.6)", // Bleu avec 60% d'opacité
+                    weight: 2,
+                    fillColor: "rgba(173, 216, 230, 0.6)", // Bleu clair avec 60% d'opacité
+                    fillOpacity: 0.6
+                };
+            } else if (layerName === "Propriété de la commune Eysines") {
+                return {
+                    color: "rgba(0, 128, 0, 0.6)", // Vert foncé avec 60% d'opacité
+                    weight: 2,
+                    fillColor: "rgba(144, 238, 144, 0.6)", // Vert clair avec 60% d'opacité
+                    fillOpacity: 0.6
+                };
+            }
+            return {
+                color: "rgba(128, 128, 128, 0.6)", // Gris avec 60% d'opacité
+                weight: 2,
+                fillColor: "rgba(211, 211, 211, 0.6)", // Gris clair avec 60% d'opacité
+                fillOpacity: 0.6
+            };
+        }
+
+        // Fonction pour styliser les zones humides
+        function styleZoneHumideFeature(feature) {
+            const type = feature.properties?.TYPE;
+            let color;
+            if (type === "Zone humide pédologique potentielle") {
+                color = "rgba(255, 0, 0, 0.5)"; // Rouge transparent
+            } else if (type === "Zone humide selon la végétation") {
+                color = "rgba(0, 255, 0, 0.5)"; // Vert transparent
+            } else if (type === "Zone humide pédologique indéterminée") {
+                color = "rgba(0, 0, 255, 0.5)"; // Bleu transparent
+            } else if (type === "Zone humide selon les études") {
+                color = "rgba(255, 255, 0, 0.5)"; // Jaune transparent
+            } else {
+                color = "rgba(0, 0, 0, 0.5)"; // Noir transparent par défaut
+            }
+            return {
+                color: color,
+                weight: 2,
+                fillColor: color,
+                fillOpacity: 0.5
+            };
+        }
+
+        // Fonction pour styliser les espaces protégés
+        function styleEspaceProtegeFeature(feature) {
+            const type = feature.properties?.TYPE;
+            let color;
+            if (type === "NATURA2000") {
+                color = "rgba(0, 255, 0, 0.5)"; // Vert transparent
+            } else if (type === "Zone de préemption des espaces naturels sensibles") {
+                color = "rgba(255, 0, 0, 0.5)"; // Rouge transparent
+            } else {
+                color = "rgba(0, 0, 0, 0.5)"; // Noir transparent par défaut
+            }
+            return {
+                color: color,
+                weight: 2,
+                fillColor: color,
+                fillOpacity: 0.5
+            };
+        }
+
+        // Fonction pour styliser les arrêts de bus et de tram
+        function styleArretFeature(feature) {
+            const vehicule = feature.properties?.vehicule;
+            if (vehicule === 'BUS') {
+                return {
+                    color: 'blue',
+                    weight: 2,
+                    fillColor: 'blue',
+                    fillOpacity: 0.8
+                };
+            } else if (vehicule === 'TRAM') {
+                return {
+                    color: 'green',
+                    weight: 2,
+                    fillColor: 'green',
+                    fillOpacity: 0.8
+                };
+            }
+            return {
+                color: 'gray',
+                weight: 2,
+                fillColor: 'gray',
+                fillOpacity: 0.8
+            };
+        }
+
+        // Tableaux pour stocker les couches
+        const hotspotLayers = [];
+        const espaceVertLayers = [];
+        const accessibiliteVertLayers = [];
+        const menageLayers = [];
+        const proprieteLayers = []; // Nouveau tableau pour les couches de propriété
+        const zoneHumideLayers = []; // Nouveau tableau pour les couches de zones humides
+        const espaceProtegeLayers = []; // Nouveau tableau pour les couches d'espaces protégés
+        const arretLayers = []; // Nouveau tableau pour les couches d'arrêts
+        let searchResults = [];
+        let currentResultIndex = 0;
+
+        // Chargement des limites d'Eysines
+        fetch("https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/LIMITE_EYSINES.geojson")
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: {
+                        color: "blue",
+                        weight: 4,
+                        fillOpacity: 0
+                    }
+                }).addTo(map);
+            })
+            .catch(err => console.error("Erreur chargement limites:", err));
+
+        // Fonction pour charger les données de la carte dans une zone
+        function loadMapDataInArea(polygon, mapType) {
+            const urlMap = {
+                continuite_ecologique: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Continuit%C3%A9%20ecologique2.geojson",
+                hotspots: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/HOTSPOTS.geojson",
+                espace_vert: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Espacevertimportance6.geojson",
+                accessibilite_vert: "https://raw.githubusercontent.com/Axeloiu/Eysines-/main/Accessibilit%C3%A9%20transport4.geojson",
+                menages: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/M%C3%A9nage%20200m.geojson",
+                carte_historique: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/1967.geojson",
+                propriete: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Propri%C3%A9t%C3%A9%20du%20cadastre3.geojson", // Nouvelle URL
+                zones_humides: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Zone%20humide.geojson", // Nouvelle URL
+                espace_protege: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Espace%20prot%C3%A9g%C3%A9.geojson", // Nouvelle URL
+                arrets: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Arret2.geojson" // Nouvelle URL
+            };
+
+            const url = urlMap[mapType];
+            if (!url) return;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const filteredData = {
+                        type: "FeatureCollection",
+                        features: data.features.filter(feature => {
+                            return !polygon || turf.booleanIntersects(polygon, feature.geometry);
+                        })
+                    };
+
+                    // Efface les couches précédentes
+                    layers[mapType].layer.clearLayers();
+
+                    let geoJsonLayer;
+                    if (mapType === 'continuite_ecologique') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: {
+                                color: "green",
+                                weight: 2,
+                                fillColor: "green",
+                                fillOpacity: 0.8
+                            }
+                        });
+                    } else if (mapType === 'espace_vert') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleEspaceVertFeature,
+                            onEachFeature: onEachEspaceVertFeature
+                        });
+                    } else if (mapType === 'accessibilite_vert') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleAccessibiliteFeature
+                        });
+                    } else if (mapType === 'menages') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: {
+                                color: "blue", // Couleur des contours
+                                weight: 2,     // Épaisseur des contours
+                                fillOpacity: 0 // Pas de remplissage
+                            },
+                            onEachFeature: onEachMenageFeature
+                        });
+                        updateMenageTotals(filteredData.features);
+                    } else if (mapType === 'carte_historique') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleHistoricalFeature
+                        });
+                    } else if (mapType === 'propriete') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleProprieteFeature,
+                            onEachFeature: onEachProprieteFeature
+                        });
+                    } else if (mapType === 'zones_humides') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleZoneHumideFeature,
+                            onEachFeature: onEachZoneHumideFeature
+                        });
+                    } else if (mapType === 'espace_protege') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleEspaceProtegeFeature,
+                            onEachFeature: onEachEspaceProtegeFeature
+                        });
+                    } else if (mapType === 'arrets') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleArretFeature,
+                            onEachFeature: onEachArretFeature
+                        });
+                    } else {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            style: styleFeature,
+                            onEachFeature: onEachFeature
+                        });
+                    }
+
+                    geoJsonLayer.addTo(layers[mapType].layer);
+
+                    // Mettre à jour les couches de recherche
+                    updateSearchLayers(filteredData, mapType);
+                })
+                .catch(err => console.error("Erreur chargement des données:", err));
+        }
+
+        // Fonction pour gérer les popups des entités des zones humides
+        function onEachZoneHumideFeature(feature, layer) {
+            const props = feature.properties || {};
+            const TYPE = props.TYPE || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Type de zone humide :</b> ${TYPE}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            zoneHumideLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour gérer les popups des entités des espaces protégés
+        function onEachEspaceProtegeFeature(feature, layer) {
+            const props = feature.properties || {};
+            const TYPE = props.TYPE || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Type d'espace protégé :</b> ${TYPE}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            espaceProtegeLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour gérer les popups des entités des arrêts
+        function onEachArretFeature(feature, layer) {
+            const props = feature.properties || {};
+            const vehicule = props.vehicule || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Type de véhicule :</b> ${vehicule}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            arretLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
+        // Fonction pour mettre à jour les couches de recherche
+        function updateSearchLayers(filteredData, mapType) {
+            hotspotLayers.length = 0;
+            espaceVertLayers.length = 0;
+            accessibiliteVertLayers.length = 0;
+            menageLayers.length = 0;
+            proprieteLayers.length = 0; // Réinitialiser les couches de propriété
+            zoneHumideLayers.length = 0; // Réinitialiser les couches de zones humides
+            espaceProtegeLayers.length = 0; // Réinitialiser les couches d'espaces protégés
+            arretLayers.length = 0; // Réinitialiser les couches d'arrêts
+
+            if (mapType === 'hotspots') {
+                Array.prototype.push.apply(hotspotLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleFeature,
+                        onEachFeature: onEachFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'espace_vert') {
+                Array.prototype.push.apply(espaceVertLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleEspaceVertFeature,
+                        onEachFeature: onEachEspaceVertFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'accessibilite_vert') {
+                Array.prototype.push.apply(accessibiliteVertLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleAccessibiliteFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'menages') {
+                Array.prototype.push.apply(menageLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: {
+                            color: "blue", // Couleur des contours
+                            weight: 2,     // Épaisseur des contours
+                            fillOpacity: 0 // Pas de remplissage
+                        },
+                        onEachFeature: onEachMenageFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'propriete') {
+                Array.prototype.push.apply(proprieteLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleProprieteFeature,
+                        onEachFeature: onEachProprieteFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'zones_humides') {
+                Array.prototype.push.apply(zoneHumideLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleZoneHumideFeature,
+                        onEachFeature: onEachZoneHumideFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'espace_protege') {
+                Array.prototype.push.apply(espaceProtegeLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleEspaceProtegeFeature,
+                        onEachFeature: onEachEspaceProtegeFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'arrets') {
+                Array.prototype.push.apply(arretLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        style: styleArretFeature,
+                        onEachFeature: onEachArretFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            }
+        }
+
+        // Fonction pour mettre à jour les totaux de ménages
+        function updateMenageTotals(features) {
+            const totalMen = Math.round(features.reduce((sum, feature) => sum + (feature.properties.men || 0), 0));
+            const totalMenPau = Math.round(features.reduce((sum, feature) => sum + (feature.properties.men_pauv || 0), 0));
+
+            // Mettre à jour la légende
+            const legend = layers.menages.legend.getContainer();
+            if (legend) {
+                const menageTotalElement = legend.querySelector('#menageTotal');
+                const menagePauTotalElement = legend.querySelector('#menagePauTotal');
+                if (menageTotalElement) {
+                    menageTotalElement.textContent = `Total Ménages: ${totalMen}`;
+                }
+                if (menagePauTotalElement) {
+                    menagePauTotalElement.textContent = `Total Ménages Pauvres: ${totalMenPau}`;
+                }
+            }
+        }
+
+        // Légendes
+        layers.hotspots.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: red"></i> Forte présence de mégots<br>
+                <i style="background: orange"></i> Mégots en quantité prononcé<br>
+                <i style="background: yellow"></i> Quelques mégots sporadiques<br>
+                <i style="background: gray"></i> Absence de mégots<br>
+            `;
+            return div;
+        };
+
+        layers.continuite_ecologique.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: green"></i> Continuité écologique<br>
+            `;
+            return div;
+        };
+
+        layers.espace_vert.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>L'importance écologique des espaces verts à Eysines</b><br>
+                <i style="background: yellow"></i> Faible<br>
+                <i style="background: orange"></i> Moyen<br>
+                <i style="background: red"></i> Fort<br>
+                <i style="background: darkred"></i> Très fort<br>
+                <b>Données créer à partir des zones humides, des espaces de protection et des espaces de continuité écologique</b><br>
+            `;
+            return div;
+        };
+
+        layers.accessibilite_vert.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: blue"></i> À moins de 100m d'un arrêt de bus<br>
+                <i style="background: green"></i> À plus de 100m d'un arrêt de bus<br>
+            `;
+            return div;
+        };
+
+        layers.menages.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: blue"></i> Ménages (zone de 200m2)<br>
+                <div id="menageTotal">Total Ménages: 0</div>
+                <div id="menagePauTotal">Total Ménages Pauvres: 0</div>
+            `;
+            return div;
+        };
+
+        layers.carte_historique.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: pink"></i> Espace agricole de 1967<br>
+                <i style="background: yellow"></i> Espace forêt de 1967<br>
+            `;
+            return div;
+        };
+
+        layers.propriete.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: blue"></i> Propriété de Bordeaux Métropole<br>
+                <i style="background: green"></i> Propriété de la commune d'Eysines<br>
+            `;
+            return div;
+        };
+
+        layers.zones_humides.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: rgba(255, 0, 0, 0.5)"></i> Zone humide pédologique potentielle<br>
+                <i style="background: rgba(0, 255, 0, 0.5)"></i> Zone humide selon la végétation<br>
+                <i style="background: rgba(0, 0, 255, 0.5)"></i> Zone humide pédologique indéterminée<br>
+                <i style="background: rgba(255, 255, 0, 0.5)"></i> Zone humide selon les études<br>
+            `;
+            return div;
+        };
+
+        layers.espace_protege.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: rgba(0, 255, 0, 0.5)"></i> Zone naturelle d'intérêt faunistique et floristique et NATURA2000<br>
+                <i style="background: rgba(255, 0, 0, 0.5)"></i> Zone de préemption des espaces naturels sensibles<br>
+            `;
+            return div;
+        };
+
+        layers.arrets.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Légende</b><br>
+                <i style="background: blue"></i> Arrêts de bus et de tram<br>
+            `;
+            return div;
+        };
+
+        // Ajout de la légende initiale si les hotspots sont sélectionnés
+        if (document.getElementById('mapSelector').value === 'hotspots') {
+            layers.hotspots.legend.addTo(map);
+        }
+
+        // Chargement initial de toutes les données de hotspots pour la fonctionnalité de recherche
+        loadMapDataInArea(null, 'hotspots');
+
+        // Gestion de la recherche
+        const searchInput = document.getElementById('searchBox');
+
+        searchInput.addEventListener('input', function (e) {
+            const query = e.target.value.toLowerCase().trim();
+            searchResults = [];
+            currentResultIndex = 0;
+
+            if (!query || query.length < 1) return;
+
+            const selectedMapType = document.getElementById('mapSelector').value;
+
+            if (selectedMapType === 'hotspots') {
+                searchResults = hotspotLayers.filter(({ props }) => {
+                    const idMatch = !isNaN(query) && props.ID?.toString() === query;
+                    const qualifMatch = props.QUALIFICAT?.toLowerCase().includes(query);
+                    const solMatch = props.Sol?.toLowerCase().includes(query);
+                    const lieuMatch = props.TYPE_LIEU?.toLowerCase().includes(query);
+                    return idMatch || qualifMatch || solMatch || lieuMatch;
+                });
+            } else if (selectedMapType === 'espace_vert') {
+                searchResults = espaceVertLayers.filter(({ props }) => {
+                    const n18Match = props.N18?.toLowerCase().includes(query);
+                    return n18Match;
+                });
+            } else if (selectedMapType === 'propriete') {
+                searchResults = proprieteLayers.filter(({ props }) => {
+                    const layerMatch = props.layer?.toLowerCase().includes(query);
+                    return layerMatch;
+                });
+            } else if (selectedMapType === 'zones_humides') {
+                searchResults = zoneHumideLayers.filter(({ props }) => {
+                    const typeMatch = props.TYPE?.toLowerCase().includes(query);
+                    return typeMatch;
+                });
+            } else if (selectedMapType === 'espace_protege') {
+                searchResults = espaceProtegeLayers.filter(({ props }) => {
+                    const typeMatch = props.TYPE?.toLowerCase().includes(query);
+                    return typeMatch;
+                });
+            } else if (selectedMapType === 'arrets') {
+                searchResults = arretLayers.filter(({ props }) => {
+                    const vehiculeMatch = props.vehicule?.toLowerCase().includes(query);
+                    return vehiculeMatch;
+                });
+            }
+
+            if (searchResults.length > 0) {
+                focusOnResult(0); // Affiche le premier résultat
+            }
+        });
+
+        // Gestion de la touche Entrée
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && searchResults.length > 1) {
+                currentResultIndex = (currentResultIndex + 1) % searchResults.length;
+                focusOnResult(currentResultIndex);
+            }
+        });
+
+        // Fonction pour se concentrer sur un résultat
+        function focusOnResult(index) {
+            const result = searchResults[index];
+            if (!result) return;
+            const layer = result.layer;
+            const centroid = getCentroid(layer.feature.geometry);
+            map.setView(centroid, 20);
+            layer.openPopup();
+        }
+
+        // Événement pour recentrer la carte
+        document.getElementById('resetView').addEventListener('click', () => {
+            map.setView([44.88, -0.64], 13);
+        });
+
+        // Événement pour sélectionner toute la carte
+        document.getElementById('selectAllButton').addEventListener('click', () => {
+            drawnItems.clearLayers();
+            const mapBounds = map.getBounds();
+            const polygon = turf.bboxPolygon([
+                mapBounds.getWest(),
+                mapBounds.getSouth(),
+                mapBounds.getEast(),
+                mapBounds.getNorth()
+            ]);
+            loadMapDataInArea(polygon.geometry, document.getElementById('mapSelector').value);
+        });
+    </script>
+</body>
+</html>
