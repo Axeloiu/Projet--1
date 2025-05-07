@@ -119,11 +119,20 @@
             height: auto;
             z-index: 1002;
         }
+        .eysines-logo {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            width: 50px; /* Ajustez la taille selon vos besoins */
+            height: auto;
+            z-index: 1002;
+        }
     </style>
 </head>
 <body>
     <!-- Ajout du logo -->
     <img src="https://raw.githubusercontent.com/Axeloiu/Eysines-/main/logo%20Outils3.png" alt="Logo" class="logo">
+    <img src="https://raw.githubusercontent.com/Axeloiu/Eysines-/main/Eysines%20logo.png" alt="Eysines Logo" class="eysines-logo">
 
     <h2>Outil intéractif d'analyse spatiale de la commune d'Eysines</h2>
     <select id="mapSelector" style="position: fixed; top: 160px; right: 60px; z-index: 1001; padding: 10px; border-radius: 6px;">
@@ -909,7 +918,7 @@
         layers.hotspots.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Des niveau de salissure en lien avec les caractères d'espaces clés</b><br>
                 <i style="background: red"></i> Forte présence de mégots<br>
                 <i style="background: orange"></i> Mégots en quantité prononcé<br>
                 <i style="background: yellow"></i> Quelques mégots sporadiques<br>
@@ -921,7 +930,7 @@
         layers.continuite_ecologique.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Une continuité écologique qui ceinture, vitalité de la commune d'Eysines</b><br>
                 <i style="background: green"></i> Continuité écologique<br>
             `;
             return div;
@@ -930,12 +939,12 @@
         layers.espace_vert.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>L'importance écologique des espaces verts à Eysines</b><br>
+                <b>L'importance écologique des espaces verts à Eysines marqueur d'espaces vitaux</b><br>
                 <i style="background: yellow"></i> Faible<br>
                 <i style="background: orange"></i> Moyen<br>
                 <i style="background: red"></i> Fort<br>
                 <i style="background: darkred"></i> Très fort<br>
-                <b>Données créer à partir des zones humides, des espaces de protection et des espaces de continuité écologique</b><br>
+                <b>Données créées à partir des zones humides, des espaces de protection et des espaces de continuité écologique</b><br>
             `;
             return div;
         };
@@ -943,7 +952,7 @@
         layers.accessibilite_vert.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Une couverture en transport en commun des espaces verts nuancé sur le territoire d'Eysines</b><br>
                 <i style="background: blue"></i> À moins de 100m d'un arrêt de bus<br>
                 <i style="background: green"></i> À plus de 100m d'un arrêt de bus<br>
             `;
@@ -964,7 +973,7 @@
         layers.carte_historique.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Un espace fortement maraicher et forestier dont l'héritage à encore beaucoup d'impact</b><br>
                 <i style="background: pink"></i> Espace agricole de 1967<br>
                 <i style="background: yellow"></i> Espace forêt de 1967<br>
             `;
@@ -974,7 +983,7 @@
         layers.propriete.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Une part de propriété qui témoigne de la gouvernance de la commune</b><br>
                 <i style="background: blue"></i> Propriété de Bordeaux Métropole<br>
                 <i style="background: green"></i> Propriété de la commune d'Eysines<br>
             `;
@@ -984,7 +993,7 @@
         layers.zones_humides.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Les zones humide, des marqueurs écologique qui témoigne d'espace vitaux</b><br>
                 <i style="background: rgba(255, 0, 0, 0.5)"></i> Zone humide pédologique potentielle<br>
                 <i style="background: rgba(0, 255, 0, 0.5)"></i> Zone humide selon la végétation<br>
                 <i style="background: rgba(0, 0, 255, 0.5)"></i> Zone humide pédologique indéterminée<br>
@@ -996,7 +1005,7 @@
         layers.espace_protege.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Les zones de protection, des marqueurs écologique qui témoigne d'espace vitaux</b><br>
                 <i style="background: rgba(0, 255, 0, 0.5)"></i> Zone naturelle d'intérêt faunistique et floristique et NATURA2000<br>
                 <i style="background: rgba(255, 0, 0, 0.5)"></i> Zone de préemption des espaces naturels sensibles<br>
             `;
@@ -1006,7 +1015,7 @@
         layers.arrets.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Légende</b><br>
+                <b>Un territoire globalement desservi aux poles et espaces stratégiques</b><br>
                 <i style="background: blue"></i> Arrêts de bus et de tram<br>
             `;
             return div;
