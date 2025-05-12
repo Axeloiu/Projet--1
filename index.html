@@ -127,6 +127,37 @@
             height: auto;
             z-index: 1002;
         }
+        #addressSearchBox {
+            position: fixed;
+            top: 120px;
+            right: 210px;
+            z-index: 1001;
+            width: 250px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: white;
+        }
+        #addressResults {
+            position: fixed;
+            top: 160px;
+            right: 60px;
+            z-index: 1001;
+            width: 300px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        #addressResults div {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        #addressResults div:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -155,18 +186,24 @@
     <input
         type="text"
         id="searchBox"
-        placeholder="Rechercher un hotspot (ID, état, type de sol, nom)…"
+        placeholder="Rechercher (ID, importance, état, type de sol, nom)…"
         style="width: 90%; max-width: 500px; padding: 8px 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #ccc;"
     >
+    <input
+        type="text"
+        id="addressSearchBox"
+        placeholder="Rechercher une adresse…"
+    >
+    <div id="addressResults"></div>
     <div id="map"></div>
     <button id="resetView" style="
     position: fixed;
-    top: 120px;
+    top: 121px;
     right: 60px;
     z-index: 1001;
-    padding: 10px 15px;
+    padding: 8px 15px;
     border: none;
-    border-radius: 6px;
+    border-radius: 5px;
     background: #007bff;
     color: white;
     font-weight: bold;
@@ -1116,6 +1153,40 @@
             ]);
             loadMapDataInArea(polygon.geometry, document.getElementById('mapSelector').value);
         });
+
+        // Gestion de la recherche d'adresse
+        const addressSearchInput = document.getElementById('addressSearchBox');
+        const addressResultsDiv = document.getElementById('addressResults');
+
+        addressSearchInput.addEventListener('input', function (e) {
+    const query = e.target.value.trim();
+    if (!query || query.length < 3) {
+        addressResultsDiv.style.display = 'none';
+        return;
+    }
+
+    // Coordonnées approximatives de la boîte englobante pour Eysines
+    const eysinesBoundingBox = [ -0.68, 44.86, -0.60, 44.90 ]; // [minLon, minLat, maxLon, maxLat]
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&bounded=1&viewbox=${eysinesBoundingBox.join(',')}`)
+        .then(res => res.json())
+        .then(data => {
+            addressResultsDiv.innerHTML = '';
+            data.forEach(result => {
+                const div = document.createElement('div');
+                div.textContent = result.display_name;
+                div.addEventListener('click', () => {
+                    map.setView([parseFloat(result.lat), parseFloat(result.lon)], 17);
+                    addressResultsDiv.style.display = 'none';
+                    addressSearchInput.value = '';
+                });
+                addressResultsDiv.appendChild(div);
+            });
+            addressResultsDiv.style.display = data.length > 0 ? 'block' : 'none';
+        })
+        .catch(err => console.error("Erreur lors de la recherche d'adresse:", err));
+});
+
     </script>
 </body>
 </html>
