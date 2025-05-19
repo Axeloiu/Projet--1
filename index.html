@@ -167,7 +167,7 @@
 
     <h2>Outil intéractif d'analyse spatiale de la commune d'Eysines</h2>
     <select id="mapSelector" style="position: fixed; top: 160px; right: 60px; z-index: 1001; padding: 10px; border-radius: 6px;">
-        <option value="">Sélectionnez une carte (default)</option>
+        <option value="">Sélectionnez une carte (par défaut)</option>
         <option value="hotspots">Hotspots à mégots</option>
         <option value="espace_vert">Espace vert</option>
         <option value="accessibilite_vert">Accessibilité des espaces verts</option>
@@ -177,7 +177,8 @@
         <option value="zones_humides">Zones humides</option>
         <option value="espace_protege">Espace protégé</option>
         <option value="continuite_ecologique">Continuité écologique</option>
-        <option value="arrets">Arrêts de bus et tram</option> <!-- Nouvelle option -->
+        <option value="arrets">Arrêts de bus et tram</option>
+        <option value="commerces">Commerces et producteurs locaux</option> <!-- Nouvelle option -->
     </select>
     <select id="baseMapSelector" style="position: fixed; bottom: 32px; left: 50px; z-index: 1001; padding: 10px; border-radius: 6px;">
         <option value="osm">OpenStreetMap</option>
@@ -273,6 +274,10 @@
                 legend: L.control({ position: 'bottomright' })
             },
             arrets: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            commerces: {
                 layer: L.layerGroup(),
                 legend: L.control({ position: 'bottomright' })
             } // Nouvelle couche
@@ -654,6 +659,35 @@
             };
         }
 
+        // Fonction pour styliser les commerces et producteurs locaux
+        function styleCommerceFeature(feature) {
+    const shop = feature.properties?.shop;
+    let color;
+    if (shop === "bakery") {
+        color = "rgba(255, 0, 0, 0.8)"; // Rouge
+    } else if (shop === "butcher") {
+        color = "rgba(0, 255, 0, 0.8)"; // Vert
+    } else if (shop === "greengrocer") {
+        color = "rgba(0, 0, 255, 0.8)"; // Bleu
+    } else if (shop === "convenience") {
+        color = "rgba(255, 255, 0, 0.8)"; // Jaune
+    } else if (shop === "farm") {
+        color = "rgba(255, 0, 255, 0.8)"; // Magenta
+    } else if (shop === "supermarket") {
+        color = "rgba(0, 255, 255, 0.8)"; // Cyan
+    } else if (shop === "produits locaux") {
+        color = "rgba(128, 128, 128, 0.8)"; // Gris
+    }
+    return {
+        color: color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.8,
+        radius: 8
+    };
+}
+
+
         // Tableaux pour stocker les couches
         const hotspotLayers = [];
         const espaceVertLayers = [];
@@ -663,6 +697,7 @@
         const zoneHumideLayers = []; // Nouveau tableau pour les couches de zones humides
         const espaceProtegeLayers = []; // Nouveau tableau pour les couches d'espaces protégés
         const arretLayers = []; // Nouveau tableau pour les couches d'arrêts
+        const commerceLayers = []; // Nouveau tableau pour les couches de commerces
         let searchResults = [];
         let currentResultIndex = 0;
 
@@ -692,7 +727,8 @@
                 propriete: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Propri%C3%A9t%C3%A9%20du%20cadastre3.geojson", // Nouvelle URL
                 zones_humides: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Zone%20humide.geojson", // Nouvelle URL
                 espace_protege: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Espace%20prot%C3%A9g%C3%A9.geojson", // Nouvelle URL
-                arrets: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Arret2.geojson" // Nouvelle URL
+                arrets: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Arret2.geojson", // Nouvelle URL
+                commerces: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Alimentation.geojson" // Nouvelle URL
             };
 
             const url = urlMap[mapType];
@@ -763,6 +799,13 @@
                         geoJsonLayer = L.geoJSON(filteredData, {
                             style: styleArretFeature,
                             onEachFeature: onEachArretFeature
+                        });
+                    } else if (mapType === 'commerces') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            pointToLayer: function (feature, latlng) {
+                                return L.circleMarker(latlng, styleCommerceFeature(feature));
+                            },
+                            onEachFeature: onEachCommerceFeature
                         });
                     } else {
                         geoJsonLayer = L.geoJSON(filteredData, {
@@ -851,6 +894,34 @@
             });
         }
 
+        // Fonction pour gérer les popups des entités des commerces
+        function onEachCommerceFeature(feature, layer) {
+            const props = feature.properties || {};
+            const full_id = props.full_id || "Non précisé";
+            const name = props.name || "Non précisé";
+            const shop = props.shop || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>ID :</b> ${full_id}<br>
+                    <b>Nom :</b> ${name}<br>
+                    <b>Type de commerce :</b> ${shop}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            commerceLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
+
         // Fonction pour mettre à jour les couches de recherche
         function updateSearchLayers(filteredData, mapType) {
             hotspotLayers.length = 0;
@@ -861,6 +932,7 @@
             zoneHumideLayers.length = 0; // Réinitialiser les couches de zones humides
             espaceProtegeLayers.length = 0; // Réinitialiser les couches d'espaces protégés
             arretLayers.length = 0; // Réinitialiser les couches d'arrêts
+            commerceLayers.length = 0; // Réinitialiser les couches de commerces
 
             if (mapType === 'hotspots') {
                 Array.prototype.push.apply(hotspotLayers, filteredData.features.map(feature => ({
@@ -926,6 +998,16 @@
                     layer: L.geoJSON(feature, {
                         style: styleArretFeature,
                         onEachFeature: onEachArretFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'commerces') {
+                Array.prototype.push.apply(commerceLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        pointToLayer: function (feature, latlng) {
+                            return L.circleMarker(latlng, styleCommerceFeature(feature));
+                        },
+                        onEachFeature: onEachCommerceFeature
                     }).addTo(layers[mapType].layer),
                     props: feature.properties
                 })));
@@ -1058,6 +1140,21 @@
             return div;
         };
 
+        layers.commerces.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Commerces et producteurs locaux</b><br>
+                <i style="background: rgba(255, 0, 0, 0.8)"></i> Boulangerie<br>
+                <i style="background: rgba(0, 255, 0, 0.8)"></i> Boucherie<br>
+                <i style="background: rgba(0, 255, 255, 0.8)"></i> Supermarché<br>
+                <i style="background: rgba(255, 255, 0, 0.8)"></i> Épicerie<br>
+                <i style="background: rgba(255, 0, 255, 0.8)"></i> Ferme<br>
+                <i style="background: rgba(0, 0, 255, 0.8)"></i> Marchand de légumes<br>
+                <i style="background: rgba(128, 128, 128, 0.8)"></i> Produits locaux<br>
+            `;
+            return div;
+        };
+
         // Ajout de la légende initiale si les hotspots sont sélectionnés
         if (document.getElementById('mapSelector').value === 'hotspots') {
             layers.hotspots.legend.addTo(map);
@@ -1110,6 +1207,13 @@
                 searchResults = arretLayers.filter(({ props }) => {
                     const vehiculeMatch = props.vehicule?.toLowerCase().includes(query);
                     return vehiculeMatch;
+                });
+            } else if (selectedMapType === 'commerces') {
+                searchResults = commerceLayers.filter(({ props }) => {
+                    const fullIdMatch = props.full_id?.toLowerCase().includes(query);
+                    const nameMatch = props.name?.toLowerCase().includes(query);
+                    const shopMatch = props.shop?.toLowerCase().includes(query);
+                    return fullIdMatch || nameMatch || shopMatch;
                 });
             }
 
