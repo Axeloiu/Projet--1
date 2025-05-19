@@ -179,6 +179,7 @@
         <option value="continuite_ecologique">Continuité écologique</option>
         <option value="arrets">Arrêts de bus et tram</option>
         <option value="commerces">Commerces alimentaires et producteurs locaux</option> <!-- Nouvelle option -->
+        <option value="jardins">Agriculture urbaine et jardin d'Eysines</option> <!-- Nouvelle option -->
     </select>
     <select id="baseMapSelector" style="position: fixed; bottom: 32px; left: 50px; z-index: 1001; padding: 10px; border-radius: 6px;">
         <option value="osm">OpenStreetMap</option>
@@ -278,6 +279,10 @@
                 legend: L.control({ position: 'bottomright' })
             },
             commerces: {
+                layer: L.layerGroup(),
+                legend: L.control({ position: 'bottomright' })
+            },
+            jardins: {
                 layer: L.layerGroup(),
                 legend: L.control({ position: 'bottomright' })
             } // Nouvelle couche
@@ -687,6 +692,63 @@
     };
 }
 
+        // Fonction pour styliser les jardins
+        function styleJardinFeature(feature) {
+            const type = feature.properties["Type d’espace"];
+            let color;
+            if (type === "Jardins Partagé" || type === "Jardin Partagé") {
+                color = "rgba(0, 255, 0, 0.8)"; // Vert
+            } else if (type === "Massifs comestibles") {
+                color = "rgba(255, 0, 0, 0.8)"; // Rouge
+            } else if (type === "Ruches pédagogiques") {
+                color = "rgba(0, 0, 255, 0.8)"; // Bleu
+            } else if (type === "Jardin Pédagogique") {
+                color = "rgba(255, 255, 0, 0.8)"; // Jaune
+            } else if (type === "Jardin Thérapeutique") {
+                color = "rgba(255, 0, 255, 0.8)"; // Magenta
+            } else {
+                color = "rgba(128, 128, 128, 0.8)"; // Gris
+            }
+            return {
+                color: color,
+                weight: 2,
+                fillColor: color,
+                fillOpacity: 0.8,
+                radius: 8
+            };
+        }
+
+        // Fonction pour gérer les popups des entités des jardins
+        function onEachJardinFeature(feature, layer) {
+            const props = feature.properties || {};
+            const nom = props["Nom de l'espace"] || "Non précisé";
+            const adresse = props["Adresse / Lieu"] || "Non précisé";
+            const type = props["Type d’espace"] || "Non précisé";
+            const gestionnaire = props["Gestionnaire / Contact"] || "Non précisé";
+            const acces = props["Accès"] || "Non précisé";
+
+            let popupContent = `
+            <div class="custom-popup-content">
+                <div>
+                    <b>Nom de l'espace :</b> ${nom}<br>
+                    <b>Adresse / Lieu :</b> ${adresse}<br>
+                    <b>Type d’espace :</b> ${type}<br>
+                    <b>Gestionnaire / Contact :</b> ${gestionnaire}<br>
+                    <b>Accès :</b> ${acces}<br>
+                </div>`;
+
+            popupContent += `</div>`;
+
+            layer.bindPopup(popupContent, {
+                className: 'custom-popup',
+                maxWidth: 9999
+            });
+
+            jardinLayers.push({
+                layer: layer,
+                props: feature.properties
+            });
+        }
 
         // Tableaux pour stocker les couches
         const hotspotLayers = [];
@@ -698,6 +760,7 @@
         const espaceProtegeLayers = []; // Nouveau tableau pour les couches d'espaces protégés
         const arretLayers = []; // Nouveau tableau pour les couches d'arrêts
         const commerceLayers = []; // Nouveau tableau pour les couches de commerces
+        const jardinLayers = []; // Nouveau tableau pour les couches de jardins
         let searchResults = [];
         let currentResultIndex = 0;
 
@@ -728,7 +791,8 @@
                 zones_humides: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Zone%20humide.geojson", // Nouvelle URL
                 espace_protege: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Espace%20prot%C3%A9g%C3%A9.geojson", // Nouvelle URL
                 arrets: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Arret2.geojson", // Nouvelle URL
-                commerces: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Alimentation.geojson" // Nouvelle URL
+                commerces: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Alimentation.geojson", // Nouvelle URL
+                jardins: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Jardins2.geojson" // Nouvelle URL
             };
 
             const url = urlMap[mapType];
@@ -806,6 +870,13 @@
                                 return L.circleMarker(latlng, styleCommerceFeature(feature));
                             },
                             onEachFeature: onEachCommerceFeature
+                        });
+                    } else if (mapType === 'jardins') {
+                        geoJsonLayer = L.geoJSON(filteredData, {
+                            pointToLayer: function (feature, latlng) {
+                                return L.circleMarker(latlng, styleJardinFeature(feature));
+                            },
+                            onEachFeature: onEachJardinFeature
                         });
                     } else {
                         geoJsonLayer = L.geoJSON(filteredData, {
@@ -933,6 +1004,7 @@
             espaceProtegeLayers.length = 0; // Réinitialiser les couches d'espaces protégés
             arretLayers.length = 0; // Réinitialiser les couches d'arrêts
             commerceLayers.length = 0; // Réinitialiser les couches de commerces
+            jardinLayers.length = 0; // Réinitialiser les couches de jardins
 
             if (mapType === 'hotspots') {
                 Array.prototype.push.apply(hotspotLayers, filteredData.features.map(feature => ({
@@ -1008,6 +1080,16 @@
                             return L.circleMarker(latlng, styleCommerceFeature(feature));
                         },
                         onEachFeature: onEachCommerceFeature
+                    }).addTo(layers[mapType].layer),
+                    props: feature.properties
+                })));
+            } else if (mapType === 'jardins') {
+                Array.prototype.push.apply(jardinLayers, filteredData.features.map(feature => ({
+                    layer: L.geoJSON(feature, {
+                        pointToLayer: function (feature, latlng) {
+                            return L.circleMarker(latlng, styleJardinFeature(feature));
+                        },
+                        onEachFeature: onEachJardinFeature
                     }).addTo(layers[mapType].layer),
                     props: feature.properties
                 })));
@@ -1143,7 +1225,7 @@
         layers.commerces.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Commerces alimentaires et producteurs locaux sur la commune d'Eysines</b><br>
+                <b>Commerces alimentaires et producteurs locaux sur la commune</b><br>
                 <i style="background: rgba(255, 0, 0, 0.8)"></i> Boulangerie<br>
                 <i style="background: rgba(0, 255, 0, 0.8)"></i> Boucherie<br>
                 <i style="background: rgba(0, 255, 255, 0.8)"></i> Supermarché<br>
@@ -1151,6 +1233,19 @@
                 <i style="background: rgba(255, 0, 255, 0.8)"></i> Ferme<br>
                 <i style="background: rgba(0, 0, 255, 0.8)"></i> Marchand de légumes<br>
                 <i style="background: rgba(128, 128, 128, 0.8)"></i> Produits locaux<br>
+            `;
+            return div;
+        };
+
+        layers.jardins.legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <b>Les jardins sur la commune</b><br>
+                <i style="background: rgba(0, 255, 0, 0.8)"></i> Jardins Partagé / Jardin Partagé<br>
+                <i style="background: rgba(255, 0, 0, 0.8)"></i> Massifs comestibles<br>
+                <i style="background: rgba(0, 0, 255, 0.8)"></i> Ruches pédagogiques<br>
+                <i style="background: rgba(255, 255, 0, 0.8)"></i> Jardin Pédagogique<br>
+                <i style="background: rgba(255, 0, 255, 0.8)"></i> Jardin Thérapeutique<br>
             `;
             return div;
         };
@@ -1214,6 +1309,15 @@
                     const nameMatch = props.name?.toLowerCase().includes(query);
                     const shopMatch = props.shop?.toLowerCase().includes(query);
                     return fullIdMatch || nameMatch || shopMatch;
+                });
+            } else if (selectedMapType === 'jardins') {
+                searchResults = jardinLayers.filter(({ props }) => {
+                    const nomMatch = props["Nom de l'espace"]?.toLowerCase().includes(query);
+                    const adresseMatch = props["Adresse / Lieu"]?.toLowerCase().includes(query);
+                    const typeMatch = props["Type d’espace"]?.toLowerCase().includes(query);
+                    const gestionnaireMatch = props["Gestionnaire / Contact"]?.toLowerCase().includes(query);
+                    const accesMatch = props["Accès"]?.toLowerCase().includes(query);
+                    return nomMatch || adresseMatch || typeMatch || gestionnaireMatch || accesMatch;
                 });
             }
 
