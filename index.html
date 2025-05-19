@@ -178,7 +178,7 @@
         <option value="espace_protege">Espace protégé</option>
         <option value="continuite_ecologique">Continuité écologique</option>
         <option value="arrets">Arrêts de bus et tram</option>
-        <option value="commerces">Commerces et producteurs locaux</option> <!-- Nouvelle option -->
+        <option value="commerces">Commerces alimentaires et producteurs locaux</option> <!-- Nouvelle option -->
     </select>
     <select id="baseMapSelector" style="position: fixed; bottom: 32px; left: 50px; z-index: 1001; padding: 10px; border-radius: 6px;">
         <option value="osm">OpenStreetMap</option>
@@ -1143,7 +1143,7 @@
         layers.commerces.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
-                <b>Commerces et producteurs locaux</b><br>
+                <b>Commerces alimentaires et producteurs locaux sur la commune d'Eysines</b><br>
                 <i style="background: rgba(255, 0, 0, 0.8)"></i> Boulangerie<br>
                 <i style="background: rgba(0, 255, 0, 0.8)"></i> Boucherie<br>
                 <i style="background: rgba(0, 255, 255, 0.8)"></i> Supermarché<br>
