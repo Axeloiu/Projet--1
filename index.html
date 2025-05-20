@@ -28,7 +28,7 @@
             border-radius: 12px;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
             margin: 20px auto;
-            position: relative; /* Ajouté pour le positionnement relatif */
+            position: relative;
         }
         .legend {
             background: white;
@@ -105,17 +105,15 @@
         .custom-popup-content > div {
             text-align: center;
         }
-        /* Style pour centrer l'échelle */
         .leaflet-bottom.leaflet-left {
             left: 50%;
             transform: translateX(-50%);
         }
-        /* Style pour le logo */
         .logo {
             position: absolute;
             top: 10px;
             right: 50px;
-            width: 50px; /* Ajustez la taille selon vos besoins */
+            width: 50px;
             height: auto;
             z-index: 1002;
         }
@@ -123,7 +121,7 @@
             position: absolute;
             top: 10px;
             left: 50px;
-            width: 50px; /* Ajustez la taille selon vos besoins */
+            width: 50px;
             height: auto;
             z-index: 1002;
         }
@@ -161,7 +159,6 @@
     </style>
 </head>
 <body>
-    <!-- Ajout du logo -->
     <img src="https://raw.githubusercontent.com/Axeloiu/Eysines-/main/logo%20Outils3.png" alt="Logo" class="logo">
     <img src="https://raw.githubusercontent.com/Axeloiu/Eysines-/main/Eysines%20logo.png" alt="Eysines Logo" class="eysines-logo">
 
@@ -178,8 +175,8 @@
         <option value="espace_protege">Espace protégé</option>
         <option value="continuite_ecologique">Continuité écologique</option>
         <option value="arrets">Arrêts de bus et tram</option>
-        <option value="commerces">Commerces alimentaires et producteurs locaux</option> <!-- Nouvelle option -->
-        <option value="jardins">Agriculture urbaine et jardin d'Eysines</option> <!-- Nouvelle option -->
+        <option value="commerces">Commerces alimentaires et producteurs locaux</option>
+        <option value="jardins">Agriculture urbaine et jardin d'Eysines</option>
     </select>
     <select id="baseMapSelector" style="position: fixed; bottom: 32px; left: 50px; z-index: 1001; padding: 10px; border-radius: 6px;">
         <option value="osm">OpenStreetMap</option>
@@ -220,23 +217,18 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
     <script>
-        // Initialisation de la carte
         const map = L.map('map').setView([44.88, -0.64], 13);
 
-        // Couche par défaut
         const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Couche satellite
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
         });
 
-        // Ajout de l'échelle
         L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);
 
-        // Objets pour les couches et les légendes
         const layers = {
             hotspots: {
                 layer: L.layerGroup(),
@@ -285,12 +277,11 @@
             jardins: {
                 layer: L.layerGroup(),
                 legend: L.control({ position: 'bottomright' })
-            } // Nouvelle couche
+            }
         };
 
         const drawnItems = new L.FeatureGroup().addTo(map);
 
-        // Contrôle de dessin
         const drawControl = new L.Control.Draw({
             draw: {
                 polygon: true,
@@ -306,7 +297,6 @@
         });
         map.addControl(drawControl);
 
-        // Événement de création de dessin
         map.on(L.Draw.Event.CREATED, function (e) {
             drawnItems.clearLayers();
             const layer = e.layer;
@@ -317,13 +307,11 @@
             loadMapDataInArea(drawnPolygon, selectedMapType);
         });
 
-        // Événement de changement de sélecteur de carte
         document.getElementById('mapSelector').addEventListener('change', function (e) {
             const selectedMap = e.target.value;
             updateMapLayers(selectedMap);
         });
 
-        // Événement de changement de sélecteur de fond de carte
         document.getElementById('baseMapSelector').addEventListener('change', function (e) {
             const selectedBaseMap = e.target.value;
             if (selectedBaseMap === 'osm') {
@@ -335,7 +323,6 @@
             }
         });
 
-        // Fonction pour mettre à jour les couches de la carte
         function updateMapLayers(selectedMap) {
             Object.values(layers).forEach(layerObj => {
                 layerObj.layer.clearLayers();
@@ -353,7 +340,6 @@
             loadMapDataInArea(polygon, selectedMap);
         }
 
-        // Fonction pour obtenir la couleur en fonction de la qualification
         function getColor(QUALIFICAT) {
             if (!QUALIFICAT) return 'black';
             const q = QUALIFICAT.toLowerCase().trim();
@@ -365,7 +351,6 @@
             return 'gray';
         }
 
-        // Fonction pour obtenir la couleur en fonction du type de proximité
         function getProximityColor(ACCESS) {
             if (!ACCESS) return 'brown';
             const t = ACCESS.toLowerCase().trim();
@@ -374,7 +359,6 @@
             return 'gray';
         }
 
-        // Fonction pour styliser les entités
         function styleFeature(feature) {
             const qualif = feature.properties?.QUALIFICAT;
             return {
@@ -385,7 +369,6 @@
             };
         }
 
-        // Fonction pour styliser les entités d'accessibilité
         function styleAccessibiliteFeature(feature) {
             const ACCESS = feature.properties?.ACCESS;
             return {
@@ -396,7 +379,6 @@
             };
         }
 
-        // Fonction pour styliser les entités des espaces verts
         function styleEspaceVertFeature(feature) {
             const n18 = feature.properties?.N18;
             return {
@@ -407,7 +389,6 @@
             };
         }
 
-        // Fonction pour obtenir la couleur des espaces verts
         function getEspaceVertColor(N18) {
             if (!N18) return 'black';
             const n = N18.toLowerCase().trim();
@@ -418,14 +399,12 @@
             return 'white';
         }
 
-        // Fonction pour obtenir la couleur des entités historiques
         function getHistoricalColor(layer) {
             if (layer === 'Espace agri 1967 réel') return 'pink';
             if (layer === 'Espace foret 1967 réel') return 'yellow';
             return 'gray';
         }
 
-        // Fonction pour styliser les entités historiques
         function styleHistoricalFeature(feature) {
             const layer = feature.properties?.layer;
             return {
@@ -436,7 +415,6 @@
             };
         }
 
-        // Fonction pour obtenir le centroïde d'une géométrie
         function getCentroid(geometry) {
             let coords;
             if (geometry.type === "Polygon") {
@@ -455,7 +433,6 @@
             return [y / len, x / len];
         }
 
-        // Fonction pour gérer les popups des entités
         function onEachFeature(feature, layer) {
             const props = feature.properties || {};
             const TYPE_LIEU = props.TYPE_LIEU || "Nom inconnu";
@@ -492,7 +469,6 @@
             });
         }
 
-        // Fonction pour gérer les popups des entités des espaces verts
         function onEachEspaceVertFeature(feature, layer) {
             const props = feature.properties || {};
             const N18 = props.N18 || "Non précisé";
@@ -520,7 +496,6 @@
             });
         }
 
-        // Fonction pour gérer les popups des entités des ménages
         function onEachMenageFeature(feature, layer) {
             const props = feature.properties || {};
             const men = props.men || 0;
@@ -546,7 +521,6 @@
             });
         }
 
-        // Fonction pour gérer les popups des entités de propriété
         function onEachProprieteFeature(feature, layer) {
             const props = feature.properties || {};
             const layerName = props.layer || "Non précisé";
@@ -570,46 +544,44 @@
             });
         }
 
-        // Fonction pour styliser les entités de propriété
         function styleProprieteFeature(feature) {
             const layerName = feature.properties?.layer;
             if (layerName === "Propriété de Bordeaux Métropole") {
                 return {
-                    color: "rgba(0, 0, 255, 0.6)", // Bleu avec 60% d'opacité
+                    color: "rgba(0, 0, 255, 0.6)",
                     weight: 2,
-                    fillColor: "rgba(173, 216, 230, 0.6)", // Bleu clair avec 60% d'opacité
+                    fillColor: "rgba(173, 216, 230, 0.6)",
                     fillOpacity: 0.6
                 };
             } else if (layerName === "Propriété de la commune Eysines") {
                 return {
-                    color: "rgba(0, 128, 0, 0.6)", // Vert foncé avec 60% d'opacité
+                    color: "rgba(0, 128, 0, 0.6)",
                     weight: 2,
-                    fillColor: "rgba(144, 238, 144, 0.6)", // Vert clair avec 60% d'opacité
+                    fillColor: "rgba(144, 238, 144, 0.6)",
                     fillOpacity: 0.6
                 };
             }
             return {
-                color: "rgba(128, 128, 128, 0.6)", // Gris avec 60% d'opacité
+                color: "rgba(128, 128, 128, 0.6)",
                 weight: 2,
-                fillColor: "rgba(211, 211, 211, 0.6)", // Gris clair avec 60% d'opacité
+                fillColor: "rgba(211, 211, 211, 0.6)",
                 fillOpacity: 0.6
             };
         }
 
-        // Fonction pour styliser les zones humides
         function styleZoneHumideFeature(feature) {
             const type = feature.properties?.TYPE;
             let color;
             if (type === "Zone humide pédologique potentielle") {
-                color = "rgba(255, 0, 0, 0.5)"; // Rouge transparent
+                color = "rgba(255, 0, 0, 0.5)";
             } else if (type === "Zone humide selon la végétation") {
-                color = "rgba(0, 255, 0, 0.5)"; // Vert transparent
+                color = "rgba(0, 255, 0, 0.5)";
             } else if (type === "Zone humide pédologique indéterminée") {
-                color = "rgba(0, 0, 255, 0.5)"; // Bleu transparent
+                color = "rgba(0, 0, 255, 0.5)";
             } else if (type === "Zone humide selon les études") {
-                color = "rgba(255, 255, 0, 0.5)"; // Jaune transparent
+                color = "rgba(255, 255, 0, 0.5)";
             } else {
-                color = "rgba(0, 0, 0, 0.5)"; // Noir transparent par défaut
+                color = "rgba(0, 0, 0, 0.5)";
             }
             return {
                 color: color,
@@ -619,16 +591,15 @@
             };
         }
 
-        // Fonction pour styliser les espaces protégés
         function styleEspaceProtegeFeature(feature) {
             const type = feature.properties?.TYPE;
             let color;
             if (type === "NATURA2000") {
-                color = "rgba(0, 255, 0, 0.5)"; // Vert transparent
+                color = "rgba(0, 255, 0, 0.5)";
             } else if (type === "Zone de préemption des espaces naturels sensibles") {
-                color = "rgba(255, 0, 0, 0.5)"; // Rouge transparent
+                color = "rgba(255, 0, 0, 0.5)";
             } else {
-                color = "rgba(0, 0, 0, 0.5)"; // Noir transparent par défaut
+                color = "rgba(0, 0, 0, 0.5)";
             }
             return {
                 color: color,
@@ -638,7 +609,6 @@
             };
         }
 
-        // Fonction pour styliser les arrêts de bus et de tram
         function styleArretFeature(feature) {
             const vehicule = feature.properties?.vehicule;
             if (vehicule === 'BUS') {
@@ -664,50 +634,23 @@
             };
         }
 
-        // Fonction pour styliser les commerces et producteurs locaux
         function styleCommerceFeature(feature) {
-    const shop = feature.properties?.shop;
-    let color;
-    if (shop === "bakery") {
-        color = "rgba(255, 0, 0, 0.8)"; // Rouge
-    } else if (shop === "butcher") {
-        color = "rgba(0, 255, 0, 0.8)"; // Vert
-    } else if (shop === "greengrocer") {
-        color = "rgba(0, 0, 255, 0.8)"; // Bleu
-    } else if (shop === "convenience") {
-        color = "rgba(255, 255, 0, 0.8)"; // Jaune
-    } else if (shop === "farm") {
-        color = "rgba(255, 0, 255, 0.8)"; // Magenta
-    } else if (shop === "supermarket") {
-        color = "rgba(0, 255, 255, 0.8)"; // Cyan
-    } else if (shop === "produits locaux") {
-        color = "rgba(128, 128, 128, 0.8)"; // Gris
-    }
-    return {
-        color: color,
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.8,
-        radius: 8
-    };
-}
-
-        // Fonction pour styliser les jardins
-        function styleJardinFeature(feature) {
-            const type = feature.properties["Type d’espace"];
+            const shop = feature.properties?.shop;
             let color;
-            if (type === "Jardins Partagé" || type === "Jardin Partagé") {
-                color = "rgba(0, 255, 0, 0.8)"; // Vert
-            } else if (type === "Massifs comestibles") {
-                color = "rgba(255, 0, 0, 0.8)"; // Rouge
-            } else if (type === "Ruches pédagogiques") {
-                color = "rgba(0, 0, 255, 0.8)"; // Bleu
-            } else if (type === "Jardin Pédagogique") {
-                color = "rgba(255, 255, 0, 0.8)"; // Jaune
-            } else if (type === "Jardin Thérapeutique") {
-                color = "rgba(255, 0, 255, 0.8)"; // Magenta
-            } else {
-                color = "rgba(128, 128, 128, 0.8)"; // Gris
+            if (shop === "bakery") {
+                color = "rgba(255, 0, 0, 0.8)";
+            } else if (shop === "butcher") {
+                color = "rgba(0, 255, 0, 0.8)";
+            } else if (shop === "greengrocer") {
+                color = "rgba(0, 0, 255, 0.8)";
+            } else if (shop === "convenience") {
+                color = "rgba(255, 255, 0, 0.8)";
+            } else if (shop === "farm") {
+                color = "rgba(255, 0, 255, 0.8)";
+            } else if (shop === "supermarket") {
+                color = "rgba(0, 255, 255, 0.8)";
+            } else if (shop === "produits locaux") {
+                color = "rgba(128, 128, 128, 0.8)";
             }
             return {
                 color: color,
@@ -718,7 +661,31 @@
             };
         }
 
-        // Fonction pour gérer les popups des entités des jardins
+        function styleJardinFeature(feature) {
+            const type = feature.properties["Type d’espace"];
+            let color;
+            if (type === "Jardins Partagé" || type === "Jardin Partagé") {
+                color = "rgba(0, 255, 0, 0.8)";
+            } else if (type === "Massifs comestibles") {
+                color = "rgba(255, 0, 0, 0.8)";
+            } else if (type === "Ruches pédagogiques") {
+                color = "rgba(0, 0, 255, 0.8)";
+            } else if (type === "Jardin Pédagogique") {
+                color = "rgba(255, 255, 0, 0.8)";
+            } else if (type === "Jardin Thérapeutique") {
+                color = "rgba(255, 0, 255, 0.8)";
+            } else {
+                color = "rgba(128, 128, 128, 0.8)";
+            }
+            return {
+                color: color,
+                weight: 2,
+                fillColor: color,
+                fillOpacity: 0.8,
+                radius: 8
+            };
+        }
+
         function onEachJardinFeature(feature, layer) {
             const props = feature.properties || {};
             const nom = props["Nom de l'espace"] || "Non précisé";
@@ -750,21 +717,19 @@
             });
         }
 
-        // Tableaux pour stocker les couches
         const hotspotLayers = [];
         const espaceVertLayers = [];
         const accessibiliteVertLayers = [];
         const menageLayers = [];
-        const proprieteLayers = []; // Nouveau tableau pour les couches de propriété
-        const zoneHumideLayers = []; // Nouveau tableau pour les couches de zones humides
-        const espaceProtegeLayers = []; // Nouveau tableau pour les couches d'espaces protégés
-        const arretLayers = []; // Nouveau tableau pour les couches d'arrêts
-        const commerceLayers = []; // Nouveau tableau pour les couches de commerces
-        const jardinLayers = []; // Nouveau tableau pour les couches de jardins
+        const proprieteLayers = [];
+        const zoneHumideLayers = [];
+        const espaceProtegeLayers = [];
+        const arretLayers = [];
+        const commerceLayers = [];
+        const jardinLayers = [];
         let searchResults = [];
         let currentResultIndex = 0;
 
-        // Chargement des limites d'Eysines
         fetch("https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/LIMITE_EYSINES.geojson")
             .then(res => res.json())
             .then(data => {
@@ -778,7 +743,6 @@
             })
             .catch(err => console.error("Erreur chargement limites:", err));
 
-        // Fonction pour charger les données de la carte dans une zone
         function loadMapDataInArea(polygon, mapType) {
             const urlMap = {
                 continuite_ecologique: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Continuit%C3%A9%20ecologique2.geojson",
@@ -787,12 +751,12 @@
                 accessibilite_vert: "https://raw.githubusercontent.com/Axeloiu/Eysines-/main/Accessibilit%C3%A9%20transport4.geojson",
                 menages: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/M%C3%A9nage%20200m.geojson",
                 carte_historique: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/1967.geojson",
-                propriete: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Propri%C3%A9t%C3%A9%20du%20cadastre3.geojson", // Nouvelle URL
-                zones_humides: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Zone%20humide.geojson", // Nouvelle URL
-                espace_protege: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Espace%20prot%C3%A9g%C3%A9.geojson", // Nouvelle URL
-                arrets: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Arret2.geojson", // Nouvelle URL
-                commerces: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Alimentation.geojson", // Nouvelle URL
-                jardins: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Jardins2.geojson" // Nouvelle URL
+                propriete: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Propri%C3%A9t%C3%A9%20du%20cadastre3.geojson",
+                zones_humides: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Zone%20humide.geojson",
+                espace_protege: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Espace%20prot%C3%A9g%C3%A9.geojson",
+                arrets: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Arret2.geojson",
+                commerces: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Alimentation.geojson",
+                jardins: "https://raw.githubusercontent.com/Axeloiu/Eysines-/refs/heads/main/Jardins2.geojson"
             };
 
             const url = urlMap[mapType];
@@ -801,14 +765,14 @@
             fetch(url)
                 .then(res => res.json())
                 .then(data => {
+                    const shouldFilter = !['arrets', 'commerces', 'jardins'].includes(mapType);
                     const filteredData = {
                         type: "FeatureCollection",
-                        features: data.features.filter(feature => {
+                        features: shouldFilter ? data.features.filter(feature => {
                             return !polygon || turf.booleanIntersects(polygon, feature.geometry);
-                        })
+                        }) : data.features
                     };
 
-                    // Efface les couches précédentes
                     layers[mapType].layer.clearLayers();
 
                     let geoJsonLayer;
@@ -833,9 +797,9 @@
                     } else if (mapType === 'menages') {
                         geoJsonLayer = L.geoJSON(filteredData, {
                             style: {
-                                color: "blue", // Couleur des contours
-                                weight: 2,     // Épaisseur des contours
-                                fillOpacity: 0 // Pas de remplissage
+                                color: "blue",
+                                weight: 2,
+                                fillOpacity: 0
                             },
                             onEachFeature: onEachMenageFeature
                         });
@@ -887,13 +851,11 @@
 
                     geoJsonLayer.addTo(layers[mapType].layer);
 
-                    // Mettre à jour les couches de recherche
                     updateSearchLayers(filteredData, mapType);
                 })
                 .catch(err => console.error("Erreur chargement des données:", err));
         }
 
-        // Fonction pour gérer les popups des entités des zones humides
         function onEachZoneHumideFeature(feature, layer) {
             const props = feature.properties || {};
             const TYPE = props.TYPE || "Non précisé";
@@ -917,7 +879,6 @@
             });
         }
 
-        // Fonction pour gérer les popups des entités des espaces protégés
         function onEachEspaceProtegeFeature(feature, layer) {
             const props = feature.properties || {};
             const TYPE = props.TYPE || "Non précisé";
@@ -941,7 +902,6 @@
             });
         }
 
-        // Fonction pour gérer les popups des entités des arrêts
         function onEachArretFeature(feature, layer) {
             const props = feature.properties || {};
             const vehicule = props.vehicule || "Non précisé";
@@ -965,7 +925,6 @@
             });
         }
 
-        // Fonction pour gérer les popups des entités des commerces
         function onEachCommerceFeature(feature, layer) {
             const props = feature.properties || {};
             const full_id = props.full_id || "Non précisé";
@@ -993,18 +952,17 @@
             });
         }
 
-        // Fonction pour mettre à jour les couches de recherche
         function updateSearchLayers(filteredData, mapType) {
             hotspotLayers.length = 0;
             espaceVertLayers.length = 0;
             accessibiliteVertLayers.length = 0;
             menageLayers.length = 0;
-            proprieteLayers.length = 0; // Réinitialiser les couches de propriété
-            zoneHumideLayers.length = 0; // Réinitialiser les couches de zones humides
-            espaceProtegeLayers.length = 0; // Réinitialiser les couches d'espaces protégés
-            arretLayers.length = 0; // Réinitialiser les couches d'arrêts
-            commerceLayers.length = 0; // Réinitialiser les couches de commerces
-            jardinLayers.length = 0; // Réinitialiser les couches de jardins
+            proprieteLayers.length = 0;
+            zoneHumideLayers.length = 0;
+            espaceProtegeLayers.length = 0;
+            arretLayers.length = 0;
+            commerceLayers.length = 0;
+            jardinLayers.length = 0;
 
             if (mapType === 'hotspots') {
                 Array.prototype.push.apply(hotspotLayers, filteredData.features.map(feature => ({
@@ -1033,9 +991,9 @@
                 Array.prototype.push.apply(menageLayers, filteredData.features.map(feature => ({
                     layer: L.geoJSON(feature, {
                         style: {
-                            color: "blue", // Couleur des contours
-                            weight: 2,     // Épaisseur des contours
-                            fillOpacity: 0 // Pas de remplissage
+                            color: "blue",
+                            weight: 2,
+                            fillOpacity: 0
                         },
                         onEachFeature: onEachMenageFeature
                     }).addTo(layers[mapType].layer),
@@ -1096,12 +1054,10 @@
             }
         }
 
-        // Fonction pour mettre à jour les totaux de ménages
         function updateMenageTotals(features) {
             const totalMen = Math.round(features.reduce((sum, feature) => sum + (feature.properties.men || 0), 0));
             const totalMenPau = Math.round(features.reduce((sum, feature) => sum + (feature.properties.men_pauv || 0), 0));
 
-            // Mettre à jour la légende
             const legend = layers.menages.legend.getContainer();
             if (legend) {
                 const menageTotalElement = legend.querySelector('#menageTotal');
@@ -1115,7 +1071,6 @@
             }
         }
 
-        // Légendes
         layers.hotspots.legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = `
@@ -1250,15 +1205,12 @@
             return div;
         };
 
-        // Ajout de la légende initiale si les hotspots sont sélectionnés
         if (document.getElementById('mapSelector').value === 'hotspots') {
             layers.hotspots.legend.addTo(map);
         }
 
-        // Chargement initial de toutes les données de hotspots pour la fonctionnalité de recherche
         loadMapDataInArea(null, 'hotspots');
 
-        // Gestion de la recherche
         const searchInput = document.getElementById('searchBox');
 
         searchInput.addEventListener('input', function (e) {
@@ -1322,11 +1274,10 @@
             }
 
             if (searchResults.length > 0) {
-                focusOnResult(0); // Affiche le premier résultat
+                focusOnResult(0);
             }
         });
 
-        // Gestion de la touche Entrée
         searchInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && searchResults.length > 1) {
                 currentResultIndex = (currentResultIndex + 1) % searchResults.length;
@@ -1334,7 +1285,6 @@
             }
         });
 
-        // Fonction pour se concentrer sur un résultat
         function focusOnResult(index) {
             const result = searchResults[index];
             if (!result) return;
@@ -1344,12 +1294,10 @@
             layer.openPopup();
         }
 
-        // Événement pour recentrer la carte
         document.getElementById('resetView').addEventListener('click', () => {
             map.setView([44.88, -0.64], 13);
         });
 
-        // Événement pour sélectionner toute la carte
         document.getElementById('selectAllButton').addEventListener('click', () => {
             drawnItems.clearLayers();
             const mapBounds = map.getBounds();
@@ -1362,39 +1310,36 @@
             loadMapDataInArea(polygon.geometry, document.getElementById('mapSelector').value);
         });
 
-        // Gestion de la recherche d'adresse
         const addressSearchInput = document.getElementById('addressSearchBox');
         const addressResultsDiv = document.getElementById('addressResults');
 
         addressSearchInput.addEventListener('input', function (e) {
-    const query = e.target.value.trim();
-    if (!query || query.length < 3) {
-        addressResultsDiv.style.display = 'none';
-        return;
-    }
+            const query = e.target.value.trim();
+            if (!query || query.length < 3) {
+                addressResultsDiv.style.display = 'none';
+                return;
+            }
 
-    // Coordonnées approximatives de la boîte englobante pour Eysines
-    const eysinesBoundingBox = [ -0.68, 44.86, -0.60, 44.90 ]; // [minLon, minLat, maxLon, maxLat]
+            const eysinesBoundingBox = [ -0.68, 44.86, -0.60, 44.90 ];
 
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&bounded=1&viewbox=${eysinesBoundingBox.join(',')}`)
-        .then(res => res.json())
-        .then(data => {
-            addressResultsDiv.innerHTML = '';
-            data.forEach(result => {
-                const div = document.createElement('div');
-                div.textContent = result.display_name;
-                div.addEventListener('click', () => {
-                    map.setView([parseFloat(result.lat), parseFloat(result.lon)], 17);
-                    addressResultsDiv.style.display = 'none';
-                    addressSearchInput.value = '';
-                });
-                addressResultsDiv.appendChild(div);
-            });
-            addressResultsDiv.style.display = data.length > 0 ? 'block' : 'none';
-        })
-        .catch(err => console.error("Erreur lors de la recherche d'adresse:", err));
-});
-
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&bounded=1&viewbox=${eysinesBoundingBox.join(',')}`)
+                .then(res => res.json())
+                .then(data => {
+                    addressResultsDiv.innerHTML = '';
+                    data.forEach(result => {
+                        const div = document.createElement('div');
+                        div.textContent = result.display_name;
+                        div.addEventListener('click', () => {
+                            map.setView([parseFloat(result.lat), parseFloat(result.lon)], 17);
+                            addressResultsDiv.style.display = 'none';
+                            addressSearchInput.value = '';
+                        });
+                        addressResultsDiv.appendChild(div);
+                    });
+                    addressResultsDiv.style.display = data.length > 0 ? 'block' : 'none';
+                })
+                .catch(err => console.error("Erreur lors de la recherche d'adresse:", err));
+        });
     </script>
 </body>
 </html>
